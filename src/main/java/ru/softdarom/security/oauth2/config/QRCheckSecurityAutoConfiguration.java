@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 @ConditionalOnProperty(prefix = "spring.security.qrcheck", name = "enabled", matchIfMissing = true)
 @EnableConfigurationProperties({ApiKeyProperties.class, OAuth2Properties.class})
 @Slf4j(topic = "SECURITY")
-public class QRCheckSecurityConfiguration {
+public class QRCheckSecurityAutoConfiguration {
 
     @Bean(name = "qrCheckAuthenticationProvider")
     @ConditionalOnMissingBean(value = CustomAuthenticationProvider.class, name = "qrCheckAuthenticationProvider")

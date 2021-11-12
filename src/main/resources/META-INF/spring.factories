@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  ru.softdarom.security.oauth2.config.QRCheckSecurityConfiguration
+  ru.softdarom.security.oauth2.config.QRCheckSecurityAutoConfiguration

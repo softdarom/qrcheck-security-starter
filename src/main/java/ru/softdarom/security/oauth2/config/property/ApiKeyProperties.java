@@ -16,8 +16,17 @@ import java.util.Set;
 @ConfigurationProperties(value = "spring.security.qrcheck.api-key")
 public class ApiKeyProperties {
 
-    private Boolean hasApiKeyAuth;
+    /**
+     * <p> Включение api-key аутентификации на сервисе.
+     * <p> Значение по-умолчанию false
+     * <p> Доступные значения: true и false.
+     **/
+    private Boolean hasApiKeyAuth = Boolean.FALSE;
 
+    /**
+     * <p> Имя header для аутентификации через api-key.
+     * <p> Значение по-умолчанию "X-ApiKey-Authorization".
+     **/
     private String headerName = "X-ApiKey-Authorization";
 
     @NotNull
@@ -28,9 +37,17 @@ public class ApiKeyProperties {
     @Setter
     public static class Token {
 
+        /**
+         *  Значение исходящего api-key.
+         *  Не должно быть пустым!
+         **/
         @NotEmpty
         private String outgoing;
 
+        /**
+         * <p> Варианты входящих api-key представленные как множество.
+         * <p> Нужно указывать только при включении {@link ApiKeyProperties#hasApiKeyAuth}.
+         **/
         private Set<String> incoming = Set.of();
 
     }
