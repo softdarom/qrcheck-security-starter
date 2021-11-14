@@ -33,10 +33,13 @@ public class CacheRemoteOAuth2TokenService implements ResourceServerTokenService
 
     @Override
     public OAuth2Authentication loadAuthentication(String accessToken) throws AuthenticationException, InvalidTokenException {
-        LOGGER.info("A user tries log in with an access token: '{}'", accessToken);
+        LOGGER.info("Пользователь пытается аутентифицироваться через токен доступа: {}", accessToken);
         var oAuthTokenInfo = verifyAccessToken(accessToken);
         if (!oAuthTokenInfo.getValid().isValid()) {
-            LOGGER.warn("'{}' token is {}. Failure. Return.", accessToken, oAuthTokenInfo.getValid());
+            LOGGER.warn(
+                    "Не получилось аутентифицироваться через токен '{}' по причине '{}'. Вернуть ошибку аутентификации.",
+                    accessToken, oAuthTokenInfo.getValid()
+            );
             return new FailureOAuthClientAuthentication();
         }
         var tokenInfo = DEFAULT_ACCESS_TOKEN_CONVERTER.extractAuthentication(createMapAuth(oAuthTokenInfo));
@@ -63,15 +66,15 @@ public class CacheRemoteOAuth2TokenService implements ResourceServerTokenService
 
     protected OAuth2TokenDto verifyAccessToken(String accessToken) {
         try {
-            LOGGER.info("An access token will be verified via an external service.");
+            LOGGER.info("Токен доступа будет проверен через внешний сервис");
             return Optional.ofNullable(
                     authHandlerExternalService.verify(properties.getToken().getOutgoing(), accessToken).getBody()
             ).orElseThrow();
         } catch (WebClientResponseException e) {
-            LOGGER.error("Feign client has returned an error! Return authorization error.", e);
+            LOGGER.error("Внешний сервис вернул ошибку! Вернуть ошибку авторизации", e);
             return new OAuth2TokenDto(TokenValidType.UNKNOWN);
         } catch (RuntimeException e) {
-            LOGGER.error("Unknown exception after a call of an external service! Return authorization error.", e);
+            LOGGER.error("Неизвестная ошибка после вызова внешнего сервиса! Вернуть ошибку авторизации", e);
             return new OAuth2TokenDto(TokenValidType.UNKNOWN);
         }
     }
