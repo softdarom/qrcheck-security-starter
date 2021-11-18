@@ -33,17 +33,16 @@ public class CacheRemoteOAuth2TokenService implements ResourceServerTokenService
 
     @Override
     public OAuth2Authentication loadAuthentication(String accessToken) throws AuthenticationException, InvalidTokenException {
-        LOGGER.info("Пользователь пытается аутентифицироваться через токен доступа: {}", accessToken);
+        LOGGER.info("A user tries log in with an access token: '{}'", accessToken);
         var oAuthTokenInfo = verifyAccessToken(accessToken);
         if (!oAuthTokenInfo.getValid().isValid()) {
-            LOGGER.warn(
-                    "Не получилось аутентифицироваться через токен '{}' по причине '{}'. Вернуть ошибку аутентификации.",
-                    accessToken, oAuthTokenInfo.getValid()
-            );
+            LOGGER.warn("'{}' token is {}. Failure. Return.", accessToken, oAuthTokenInfo.getValid());
             return new FailureOAuthClientAuthentication();
         }
+        LOGGER.info("A user (id: {}) was authenticated", oAuthTokenInfo.getUserId());
         var tokenInfo = DEFAULT_ACCESS_TOKEN_CONVERTER.extractAuthentication(createMapAuth(oAuthTokenInfo));
-        var oAuth2 = new UsernamePasswordAuthenticationToken(oAuthTokenInfo.getUserId(), accessToken, tokenInfo.getAuthorities());
+        var oAuth2 =
+                new UsernamePasswordAuthenticationToken(oAuthTokenInfo.getUserId(), accessToken, tokenInfo.getAuthorities());
         var authentication = new OAuth2Authentication(tokenInfo.getOAuth2Request(), oAuth2);
         authentication.setAuthenticated(true);
         return authentication;
@@ -66,15 +65,15 @@ public class CacheRemoteOAuth2TokenService implements ResourceServerTokenService
 
     protected OAuth2TokenDto verifyAccessToken(String accessToken) {
         try {
-            LOGGER.info("Токен доступа будет проверен через внешний сервис");
+            LOGGER.info("An access token will be verified via an external service.");
             return Optional.ofNullable(
                     authHandlerExternalService.verify(properties.getToken().getOutgoing(), accessToken).getBody()
             ).orElseThrow();
         } catch (WebClientResponseException e) {
-            LOGGER.error("Внешний сервис вернул ошибку! Вернуть ошибку авторизации", e);
+            LOGGER.error("Feign client has returned an error! Return authorization error.", e);
             return new OAuth2TokenDto(TokenValidType.UNKNOWN);
         } catch (RuntimeException e) {
-            LOGGER.error("Неизвестная ошибка после вызова внешнего сервиса! Вернуть ошибку авторизации", e);
+            LOGGER.error("Unknown exception after a call of an external service! Return authorization error.", e);
             return new OAuth2TokenDto(TokenValidType.UNKNOWN);
         }
     }

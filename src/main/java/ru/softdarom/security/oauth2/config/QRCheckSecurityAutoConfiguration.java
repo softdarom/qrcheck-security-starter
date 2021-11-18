@@ -116,7 +116,7 @@ public class QRCheckSecurityAutoConfiguration {
         filter.setAuthenticationManager(authentication -> {
             var credentials = Optional.ofNullable(authentication.getCredentials()).map(Object::toString).orElse(null);
             if (StringUtils.hasText(credentials) && properties.getToken().getIncoming().contains(credentials)) {
-                LOGGER.debug("Успешная аутентификация по ApiKey: '{}'", credentials);
+                LOGGER.info("Success authentication by ApiKey: '{}'", credentials);
                 return new ApiKeyAuthorizationConfig.ApiKeyAuthentication(credentials);
             } else {
                 throw new BadCredentialsException("The API key was not an expected value.");
