@@ -26,9 +26,12 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.util.StringUtils;
+import org.springframework.web.reactive.function.client.WebClient;
 import ru.softdarom.security.oauth2.config.property.ApiKeyProperties;
 import ru.softdarom.security.oauth2.config.property.OAuth2Properties;
-import ru.softdarom.security.oauth2.config.security.*;
+import ru.softdarom.security.oauth2.config.security.ApiKeyAuthorizationConfig;
+import ru.softdarom.security.oauth2.config.security.CacheRemoteOAuth2TokenService;
+import ru.softdarom.security.oauth2.config.security.CustomAuthenticationProvider;
 import ru.softdarom.security.oauth2.config.security.handler.DefaultAccessDeniedHandler;
 import ru.softdarom.security.oauth2.config.security.handler.DefaultAuthenticationEntryPoint;
 import ru.softdarom.security.oauth2.service.AuthHandlerExternalService;
@@ -83,9 +86,18 @@ public class QRCheckSecurityAutoConfiguration {
     @ConditionalOnMissingBean(value = AuthHandlerExternalService.class)
     @ConditionalOnBean(value = AuthenticationProvider.class)
     @ConditionalOnProperty(prefix = "spring.security.qrcheck.oauth2", name = "enabled", matchIfMissing = true)
-    AuthHandlerExternalService authHandlerExternalService(ApiKeyProperties apiKeyProperties,
-                                                          OAuth2Properties oAuth2Properties) {
-        return new AuthHandlerExternalServiceImpl(apiKeyProperties, oAuth2Properties);
+    AuthHandlerExternalService authHandlerExternalService(OAuth2Properties oAuth2Properties, WebClient webClient) {
+        return new AuthHandlerExternalServiceImpl(oAuth2Properties, webClient);
+    }
+
+    @Bean("qrCheckWebClient")
+    @ConditionalOnBean(value = AuthenticationProvider.class)
+    @ConditionalOnProperty(prefix = "spring.security.qrcheck.oauth2", name = "enabled", matchIfMissing = true)
+    public WebClient webClient(ApiKeyProperties apiKeyProperties, OAuth2Properties oAuth2Properties) {
+        return WebClient.builder()
+                .baseUrl(oAuth2Properties.getAuthServer().getHost())
+                .defaultHeader(apiKeyProperties.getHeaderName(), apiKeyProperties.getToken().getOutgoing())
+                .build();
     }
 
     @Primary
