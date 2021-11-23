@@ -20,7 +20,7 @@ public class DefaultAccessDeniedHandler extends DefaultExceptionHandler implemen
 
     @Override
     protected HttpStatus getHttpStatus() {
-        return HttpStatus.UNAUTHORIZED;
+        return HttpStatus.FORBIDDEN;
     }
 
     @Override
