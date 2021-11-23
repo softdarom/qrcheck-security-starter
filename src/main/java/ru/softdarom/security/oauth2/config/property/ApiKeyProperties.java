@@ -39,10 +39,9 @@ public class ApiKeyProperties {
 
         /**
          *  Значение исходящего api-key.
-         *  Не должно быть пустым!
+         *  Значение по-умолчанию пустая строка.
          **/
-        @NotEmpty
-        private String outgoing;
+        private String outgoing = "";
 
         /**
          * <p> Варианты входящих api-key представленные как множество.

@@ -27,8 +27,12 @@ public abstract class DefaultExceptionHandler {
     protected abstract HttpStatus getHttpStatus();
 
     protected void doHandle(HttpServletResponse response, RuntimeException exception) throws IOException {
+        doHandle(response, exception, getHttpStatus());
+    }
+
+    protected void doHandle(HttpServletResponse response, RuntimeException exception, HttpStatus httpStatus) throws IOException {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setStatus(getHttpStatus().value());
+        response.setStatus(httpStatus.value());
         var traceId = tracer.currentSpan().context().traceIdString();
         var spanId = tracer.currentSpan().context().spanIdString();
         response.setHeader(DEFAULT_TRACE_ID_HEADER_NAME, traceId);

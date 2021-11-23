@@ -14,14 +14,10 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
 
     @Override
     public final boolean supports(Class<?> authentication) {
-        return isPreAuthenticatedAuthenticationToken(authentication) || isFailureOAuthClientAuthentication(authentication);
+        return isPreAuthenticatedAuthenticationToken(authentication);
     }
 
     private boolean isPreAuthenticatedAuthenticationToken(Class<?> authentication) {
         return PreAuthenticatedAuthenticationToken.class.isAssignableFrom(authentication);
-    }
-
-    private boolean isFailureOAuthClientAuthentication(Class<?> authentication) {
-        return CacheRemoteOAuth2TokenService.FailureOAuthClientAuthentication.class.isAssignableFrom(authentication);
     }
 }
