@@ -32,10 +32,10 @@ public class CacheRemoteOAuth2TokenService implements ResourceServerTokenService
 
     @Override
     public OAuth2Authentication loadAuthentication(String accessToken) throws InvalidTokenException {
-        LOGGER.info("A user tries log in with an access token: '{}'", accessToken);
+        LOGGER.debug("A user tries log in with an access token: '{}'", accessToken);
         var oAuthTokenInfo = verifyAccessToken(accessToken);
         checkToken(oAuthTokenInfo);
-        LOGGER.info("A user (id: {}) was authenticated", oAuthTokenInfo.getUserId());
+        LOGGER.debug("A user (id: {}) was authenticated", oAuthTokenInfo.getUserId());
         var tokenInfo = DEFAULT_ACCESS_TOKEN_CONVERTER.extractAuthentication(createMapAuth(oAuthTokenInfo));
         var oAuth2 = new UsernamePasswordAuthenticationToken(oAuthTokenInfo.getUserId(), accessToken, tokenInfo.getAuthorities());
         var authentication = new OAuth2Authentication(tokenInfo.getOAuth2Request(), oAuth2);
@@ -44,11 +44,11 @@ public class CacheRemoteOAuth2TokenService implements ResourceServerTokenService
     }
 
     private void checkToken(OAuth2TokenDto oAuthTokenInfo) {
-        LOGGER.info("Checking a token");
+        LOGGER.debug("Checking a token");
         if (!oAuthTokenInfo.getValid().isValid()) {
             throw new InvalidTokenException("Unauthorized. Token is " + oAuthTokenInfo.getValid().name().toLowerCase());
         }
-        LOGGER.info("Token is valid. Continue.");
+        LOGGER.debug("Token is valid. Continue.");
     }
 
     @Override
@@ -68,7 +68,7 @@ public class CacheRemoteOAuth2TokenService implements ResourceServerTokenService
 
     protected OAuth2TokenDto verifyAccessToken(String accessToken) {
         try {
-            LOGGER.info("An access token will be verified via an external service.");
+            LOGGER.debug("An access token will be verified via an external service.");
             return Optional.ofNullable(
                     authHandlerExternalService.verify(properties.getToken().getOutgoing(), accessToken).getBody()
             ).orElseThrow();
