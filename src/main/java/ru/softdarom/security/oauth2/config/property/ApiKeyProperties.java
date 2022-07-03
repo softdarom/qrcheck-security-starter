@@ -6,9 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.Valid;
-import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-import java.util.Set;
 
 @Validated
 @Getter
@@ -17,11 +15,11 @@ import java.util.Set;
 public class ApiKeyProperties {
 
     /**
-     * <p> Включение api-key аутентификации на сервисе.
+     * <p> Включение default api-key аутентификации на сервисе.
      * <p> Значение по-умолчанию false
      * <p> Доступные значения: true и false.
      **/
-    private Boolean hasApiKeyAuth = Boolean.FALSE;
+    private Boolean enabled = Boolean.FALSE;
 
     /**
      * <p> Имя header для аутентификации через api-key.
@@ -30,7 +28,7 @@ public class ApiKeyProperties {
     private String headerName = "X-ApiKey-Authorization";
 
     @NotNull
-    private Token token;
+    private Token token = new Token();
 
     @Valid
     @Getter
@@ -38,16 +36,16 @@ public class ApiKeyProperties {
     public static class Token {
 
         /**
-         *  Значение исходящего api-key.
-         *  Значение по-умолчанию пустая строка.
+         * <p> Значение стандартного исходящего api-key для external auth service.
+         * <p> Нужно указывать только при включении {@link ApiKeyProperties#enabled}.
          **/
         private String outgoing = "";
 
         /**
-         * <p> Варианты входящих api-key представленные как множество.
-         * <p> Нужно указывать только при включении {@link ApiKeyProperties#hasApiKeyAuth}.
+         * <p> Имя сервиса для получения доступных токенов
+         * <p> Значение по-умолчанию spring.application.name
+         * <p> Нужно указывать только при включении {@link ApiKeyProperties#enabled}.
          **/
-        private Set<String> incoming = Set.of();
-
+        private String serviceName;
     }
 }

@@ -4,6 +4,7 @@ import brave.Tracer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.CacheBuilder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -28,28 +29,36 @@ import org.springframework.security.web.authentication.preauth.PreAuthenticatedA
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import ru.softdarom.security.oauth2.config.property.ApiKeyProperties;
+import ru.softdarom.security.oauth2.config.property.AuthServerProperties;
 import ru.softdarom.security.oauth2.config.property.OAuth2Properties;
 import ru.softdarom.security.oauth2.config.security.ApiKeyAuthorizationConfig;
 import ru.softdarom.security.oauth2.config.security.CacheRemoteOAuth2TokenService;
 import ru.softdarom.security.oauth2.config.security.CustomAuthenticationProvider;
 import ru.softdarom.security.oauth2.config.security.handler.DefaultAccessDeniedHandler;
 import ru.softdarom.security.oauth2.config.security.handler.DefaultAuthenticationEntryPoint;
-import ru.softdarom.security.oauth2.service.AuthHandlerExternalService;
-import ru.softdarom.security.oauth2.service.impl.AuthHandlerExternalServiceImpl;
+import ru.softdarom.security.oauth2.service.AuthExternalService;
+import ru.softdarom.security.oauth2.service.impl.AuthExternalServiceImpl;
 
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Configuration
+@EnableConfigurationProperties({ApiKeyProperties.class, OAuth2Properties.class, AuthServerProperties.class})
 @ConditionalOnClass(
         {
-                CacheManager.class, AuthenticationProvider.class, ResourceServerTokenServices.class,
-                Tracer.class, ObjectMapper.class, EnableResourceServer.class,
-                Authentication.class, PreAuthenticatedAuthenticationToken.class
+                ResourceServerTokenServices.class,
+                EnableResourceServer.class,
+                CacheManager.class,
+                AuthenticationProvider.class,
+                Tracer.class,
+                ObjectMapper.class,
+                Authentication.class,
+                PreAuthenticatedAuthenticationToken.class
         }
 )
 @ConditionalOnProperty(prefix = "spring.security.qrcheck", name = "enabled", matchIfMissing = true)
-@EnableConfigurationProperties({ApiKeyProperties.class, OAuth2Properties.class})
 @Slf4j(topic = "SECURITY")
 public class QRCheckSecurityAutoConfiguration {
 
@@ -75,27 +84,23 @@ public class QRCheckSecurityAutoConfiguration {
 
     @Bean(name = "qrCheckCacheRemoteOAuth2TokenService")
     @ConditionalOnMissingBean(value = ResourceServerTokenServices.class)
-    @ConditionalOnProperty(prefix = "spring.security.qrcheck.oauth2", name = "enabled", matchIfMissing = true)
     @ConditionalOnBean(value = AuthenticationProvider.class, name = "qrCheckAuthenticationProvider")
-    ResourceServerTokenServices cacheRemoteOAuth2TokenService(ApiKeyProperties properties,
-                                                              AuthHandlerExternalService authHandlerExternalService) {
-        return new CacheRemoteOAuth2TokenService(properties, authHandlerExternalService);
+    @ConditionalOnProperty(prefix = "spring.security.qrcheck.oauth2", name = "enabled", matchIfMissing = true)
+    ResourceServerTokenServices cacheRemoteOAuth2TokenService(AuthExternalService defaultAuthExternalService) {
+        return new CacheRemoteOAuth2TokenService(defaultAuthExternalService);
     }
 
-    @Bean
-    @ConditionalOnMissingBean(value = AuthHandlerExternalService.class)
-    @ConditionalOnBean(value = AuthenticationProvider.class)
-    @ConditionalOnProperty(prefix = "spring.security.qrcheck.oauth2", name = "enabled", matchIfMissing = true)
-    AuthHandlerExternalService authHandlerExternalService(OAuth2Properties oAuth2Properties, WebClient webClient) {
-        return new AuthHandlerExternalServiceImpl(oAuth2Properties, webClient);
+    @Bean("defaultAuthExternalService")
+    @ConditionalOnMissingBean(value = AuthExternalService.class)
+    AuthExternalService authExternalService(AuthServerProperties authServerProperties, WebClient qrWebClient) {
+        return new AuthExternalServiceImpl(qrWebClient, authServerProperties);
     }
 
     @Bean("qrCheckWebClient")
-    @ConditionalOnBean(value = AuthenticationProvider.class)
-    @ConditionalOnProperty(prefix = "spring.security.qrcheck.oauth2", name = "enabled", matchIfMissing = true)
-    public WebClient webClient(ApiKeyProperties apiKeyProperties, OAuth2Properties oAuth2Properties) {
+    @ConditionalOnMissingBean(value = WebClient.class)
+    public WebClient defaultWebClient(ApiKeyProperties apiKeyProperties, AuthServerProperties authServerProperties) {
         return WebClient.builder()
-                .baseUrl(oAuth2Properties.getAuthServer().getHost())
+                .baseUrl(authServerProperties.getHost())
                 .defaultHeader(apiKeyProperties.getHeaderName(), apiKeyProperties.getToken().getOutgoing())
                 .build();
     }
@@ -111,8 +116,8 @@ public class QRCheckSecurityAutoConfiguration {
                 return new ConcurrentMapCache(
                         name,
                         CacheBuilder.newBuilder()
-                                .maximumSize(oAuth2Properties.getAuthServer().getCache().getSize())
-                                .expireAfterWrite(oAuth2Properties.getAuthServer().getCache().getExpireAfterWriteInSec(), TimeUnit.SECONDS)
+                                .maximumSize(oAuth2Properties.getCache().getSize())
+                                .expireAfterWrite(oAuth2Properties.getCache().getExpireAfterWriteInSec(), TimeUnit.SECONDS)
                                 .build()
                                 .asMap(),
                         false);
@@ -120,15 +125,25 @@ public class QRCheckSecurityAutoConfiguration {
         };
     }
 
-    @Bean(name = "qrCheckApiKeyAuthorizationFilter")
+    @Bean(name = "qrCheckApiKeyExternalAuthorizationFilter")
     @ConditionalOnMissingBean(value = ApiKeyAuthorizationConfig.ApiKeyAuthorizationFilter.class)
-    @ConditionalOnProperty(prefix = "spring.security.qrcheck.api-key", name = "hasApiKeyAuth", havingValue = "true")
-    AbstractPreAuthenticatedProcessingFilter apiKeyAuthorizationFilter(ApiKeyProperties properties) {
+    @ConditionalOnProperty(prefix = "spring.security.qrcheck.api-key", name = "enabled", havingValue = "true")
+    AbstractPreAuthenticatedProcessingFilter apiKeyExternalAuthorizationFilter(
+            ApiKeyProperties properties,
+            AuthExternalService defaultAuthExternalService,
+            @Value("${spring.application.name}") String springApplicationName
+    ) {
         var filter = new ApiKeyAuthorizationConfig.ApiKeyAuthorizationFilter(properties.getHeaderName());
         filter.setAuthenticationManager(authentication -> {
             var credentials = Optional.ofNullable(authentication.getCredentials()).map(Object::toString).orElse(null);
-            if (StringUtils.hasText(credentials) && properties.getToken().getIncoming().contains(credentials)) {
-                LOGGER.info("Success authentication by ApiKey: '{}'", credentials);
+            var serviceName = Optional.ofNullable(properties.getToken().getServiceName()).orElse(springApplicationName);
+            var incoming =
+                    defaultAuthExternalService.getIncomingTokens(serviceName)
+                            .stream()
+                            .map(UUID::toString)
+                            .collect(Collectors.toSet());
+            if (StringUtils.hasText(credentials) && incoming.contains(credentials)) {
+                LOGGER.info("Success external authentication by ApiKey: '{}'", credentials);
                 return new ApiKeyAuthorizationConfig.ApiKeyAuthentication(credentials);
             } else {
                 throw new BadCredentialsException("The API key was not an expected value.");
