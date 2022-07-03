@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "ru.softdarom.security"
-version = "1.2.0"
+version = "2.0.0"
 sourceCompatibility = "11"
 
 repositories {
@@ -39,10 +39,9 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-validation"
     implementation "org.springframework.boot:spring-boot-starter-security"
     implementation "org.springframework.cloud:spring-cloud-starter-sleuth"
-    implementation "org.springframework.security.oauth:spring-security-oauth2:2.5.1.RELEASE"
+    implementation "org.springframework.security.oauth:spring-security-oauth2:2.5.2.RELEASE"
     api "org.springframework.boot:spring-boot-starter-webflux"
-
-    api 'com.google.guava:guava:29.0-jre'
+    api "com.google.guava:guava:31.1-jre"
 
     compileOnly "org.projectlombok:lombok"
     compileOnly "org.springframework.boot:spring-boot-configuration-processor"
