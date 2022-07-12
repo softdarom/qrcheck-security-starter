@@ -31,13 +31,16 @@ import org.springframework.web.reactive.function.client.WebClient;
 import ru.softdarom.security.oauth2.config.property.ApiKeyProperties;
 import ru.softdarom.security.oauth2.config.property.AuthServerProperties;
 import ru.softdarom.security.oauth2.config.property.OAuth2Properties;
+import ru.softdarom.security.oauth2.config.property.RoleProperties;
 import ru.softdarom.security.oauth2.config.security.ApiKeyAuthorizationConfig;
 import ru.softdarom.security.oauth2.config.security.CacheRemoteOAuth2TokenService;
 import ru.softdarom.security.oauth2.config.security.CustomAuthenticationProvider;
 import ru.softdarom.security.oauth2.config.security.handler.DefaultAccessDeniedHandler;
 import ru.softdarom.security.oauth2.config.security.handler.DefaultAuthenticationEntryPoint;
 import ru.softdarom.security.oauth2.service.AuthExternalService;
+import ru.softdarom.security.oauth2.service.RoleService;
 import ru.softdarom.security.oauth2.service.impl.AuthExternalServiceImpl;
+import ru.softdarom.security.oauth2.service.impl.RoleServiceImpl;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -45,7 +48,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Configuration
-@EnableConfigurationProperties({ApiKeyProperties.class, OAuth2Properties.class, AuthServerProperties.class})
+@EnableConfigurationProperties(
+        {
+                ApiKeyProperties.class,
+                OAuth2Properties.class,
+                AuthServerProperties.class,
+                RoleProperties.class
+        }
+)
 @ConditionalOnClass(
         {
                 ResourceServerTokenServices.class,
@@ -150,5 +160,11 @@ public class QRCheckSecurityAutoConfiguration {
             }
         });
         return filter;
+    }
+
+    @Bean(name = "defaultRoleService")
+    @ConditionalOnMissingBean(value = RoleService.class)
+    RoleService defaultRoleService(RoleProperties roleProperties) {
+        return new RoleServiceImpl(roleProperties);
     }
 }
